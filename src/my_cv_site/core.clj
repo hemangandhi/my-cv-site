@@ -42,11 +42,16 @@
         (recur (assoc-in acc n-s {:font-size v :text (-> szs first second) :children []})
                (concat n-s [:children -1]) (rest szs))))))
 
+(defn priturn [v]
+  (println v) v)
+
 (defn -main [& args]
-  (->> "test.pdf"
+  (->> (first args)
        c-io/resource
        pdf->str
        str->sizes-map
+       ((fn [mp] (let [[mx _] (apply max-key first mp)]
+                   (drop-while #(< (first %) mx) mp))))
        ((fn [m] (guess-hierarchy m :tolerance 1)))
        mcs-h/hier->site
-       (spit (c-io/resource "out.html"))))
+       (spit (c-io/resource (second args)))))

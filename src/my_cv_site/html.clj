@@ -1,5 +1,5 @@
 (ns my-cv-site.html
-  (:require [hiccup.core :as hic]
+  (:require [hiccup.util :as hic-u]
             [hiccup.page :as hic-p]))
 
 (def bootstrap-include
@@ -13,39 +13,15 @@
   (if (nil? va) tag
     (assoc-in tag [1 attr] va)))
 
-(defn find-in
-  ([struct key] (find-in struct key []))
-  ([struct key acc]
-   (when-let [gis-o (and (coll? struct) (get-in struct acc))]
-     (when-let [gis (if (coll? gis-o) gis-o (= gis-o key))]
-       (if (= gis-o key) acc
-         (first (filter (complement nil?) (map #(->> % (conj acc) (find-in struct key))
-                                               (if (vector? gis)
-                                                 (range (count gis))
-                                                 (keys gis))))))))))
-
-(defn merge-kids
-  ([tag where kids] (update-in tag where #(apply concat (butlast %) [kids])))
-  ([tag kids] (apply concat tag [kids])))
-
-(defn hier->hic
-  ([hier text->hic clas] (map-indexed (fn [idx _] (hier->hic hier text->hic clas [idx])) (range (count hier))))
-  ([hier text->hic clas lv]
-   (-> (text->hic hier lv)
-       (add-attr :class (clas lv))
-       ((fn [tag]
-         (apply merge-kids (concat [tag]
-                                   (let [loc (find-in tag :deepest)]
-                                     (println "Dbg " loc)
-                                     (if (nil? loc) [] [(butlast loc)]))
-                                   [(map-indexed (fn [idx va] (hier->hic hier
-                                                                         text->hic
-                                                                         clas
-                                                                         (concat lv [:children idx])))
-                                                 (:children hier))])))))))
+(defn hier->hic [hier writer]
+  (if (map? hier)
+    (writer hier hier->hic)
+    (if (not (empty? hier))
+      (map #(writer % hier->hic) hier)
+      nil)))
 
 (defn deduce-navbar-ul [hier]
-  (let [sections-loc-start (if (<= 1 (count hier)) [0 :children] [])
+  (let [sections-loc-start (if (>= 1 (count hier)) [0 :children] [])
         locs (map-indexed (fn [idx _] (conj sections-loc-start idx))
                           (get-in hier sections-loc-start))]
     (reduce (fn [state loc] (let [id (str "section" (:idx state))]
@@ -72,21 +48,22 @@
                   [:a.navbar-brand.page-scroll {:href "#"} "My Interactive Resume"]]
                  [:div#navbar-div.collapse.navbar-collapse ul]]])))
 
+(defn hier->str [hier]
+  (-> hier :text clojure.string/join hic-u/to-str))
+
 (defn gen-main-body [hier]
-  (hier->hic hier (fn [h lv] (if (> 2 (count lv)) [:section {:id (get-in h (conj lv :id))}
-                                                   [:h1 (get-in h (conj lv :text))]
-                                                   [:hr]
-                                                   [:div.container :deepest]]
-                                   [:p (get-in h (conj lv :text)) :deepest]))
-             (fn [lv] nil)))
+  (hier->hic hier (letfn [(w [h h->h]
+                            (if (nil? (:id h))
+                              [:p (concat (hier->str h) (h->h (:children h) w))]
+                              [:section {:id (:id h)} [:h1 (hier->str h)] [:hr] [:div.container (h->h (:children h) w)]]))]
+                           w)))
 
 (defn hier->site [hier]
   (let [nv (make-navbar hier)
         body (->> nv :sections (concat [:hier]) (get-in nv) gen-main-body)
         head (concat [:head [:title (guess-title hier)]]
-                     (hic-p/include-js (:js bootstrap-include))
                      (hic-p/include-js (:jquery bootstrap-include))
-                     (hic-p/include-css (:css bootstrap-include)))]
-    (println body)
-    (println [:html head [:body (concat (:navbar nv) body)]])
-    (hic-p/html5 [:html head [:body (concat (:navbar nv) body)]])))
+                     (hic-p/include-js (:js bootstrap-include))
+                     (hic-p/include-css (:css bootstrap-include)))
+        full-thing [:html head (concat [:body] [(:navbar nv)] body)]]
+    (hic-p/html5 full-thing)))
