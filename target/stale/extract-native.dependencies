@@ -1,0 +1,1 @@
+([:dependencies ([org.clojure/clojure "1.7.0"] [hiccup/hiccup "1.0.5"] [org.apache.pdfbox/pdfbox "1.8.2"])])

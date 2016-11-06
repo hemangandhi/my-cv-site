@@ -1,10 +1,10 @@
 # my-cv-site
 
-A Clojure library designed to ... well, that part is up to you.
+Clojure utility to generate a webpage from your resume.
 
 ## Usage
 
-FIXME
+Can either be compiled (requires clojure development tools) or used through the standalone jar in target.
 
 ## License
 
