@@ -48,5 +48,5 @@
        pdf->str
        str->sizes-map
        ((fn [m] (guess-hierarchy m :tolerance 1)))
-       ((fn [h] (wrap-body (hier->html-ul h) (guess-head h))))
+       mcs-h/hier->site
        (spit (c-io/resource "out.html"))))
