@@ -6,4 +6,5 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
+                 [hiccup "1.0.5"]
                  [org.apache.pdfbox/pdfbox "1.8.2"]])
